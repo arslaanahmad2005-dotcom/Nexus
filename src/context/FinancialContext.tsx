@@ -238,8 +238,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           }))
         );
       }
-    } catch (err: any) {
-      console.error('Error loading user financial data:', err);
+    } catch (_err) {
+      console.error('[NEXUS Data] Error loading financial records: [REDACTED]');
     }
   };
 
@@ -406,8 +406,8 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       return data.analysis;
     } catch (err: any) {
-      console.error('Error during AI analysis:', err);
-      setError(err.message || 'Unable to connect to AI analysis service.');
+      console.error('[NEXUS AI] Error during AI analysis: [REDACTED]');
+      setError('Unable to complete AI analysis at this moment. You can retry or view calculated metrics.');
       return null;
     } finally {
       setIsAnalyzing(false);
@@ -651,7 +651,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           .upload(storagePath, file);
 
         if (uploadErr) {
-          console.warn('Storage bucket upload notice:', uploadErr.message);
+          console.warn('[NEXUS Storage] Upload notice: [REDACTED]');
         }
 
         // Insert metadata record

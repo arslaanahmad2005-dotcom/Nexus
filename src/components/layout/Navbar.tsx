@@ -13,9 +13,11 @@ import {
   User,
   ChevronDown,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { PrivacySettingsModal } from '../common/PrivacySettingsModal';
 
 export const Navbar: React.FC = () => {
   const { user, profile, isDemoMode, currentDemoPersona, switchDemoPersona, resetDemoData, signOut, enterDemoMode } =
@@ -24,6 +26,7 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [demoDropdownOpen, setDemoDropdownOpen] = useState(false);
+  const [privacyModalOpen, setPrivacyModalOpen] = useState(false);
 
   const navLinks = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -175,6 +178,16 @@ export const Navbar: React.FC = () => {
 
                 <button
                   type="button"
+                  onClick={() => setPrivacyModalOpen(true)}
+                  className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
+                  title="Privacy & Data Settings"
+                  aria-label="Privacy & Data Settings"
+                >
+                  <Settings className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => signOut()}
                   className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                   title="Sign out"
@@ -263,7 +276,19 @@ export const Navbar: React.FC = () => {
                 );
               })}
 
-              <div className="pt-3 border-t border-slate-100 mt-2">
+              <div className="pt-3 border-t border-slate-100 mt-2 space-y-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrivacyModalOpen(true);
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-lg"
+                >
+                  <Settings className="w-5 h-5 text-slate-400" />
+                  <span>Privacy & Data Settings</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
@@ -307,6 +332,12 @@ export const Navbar: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Privacy & Account Settings Modal */}
+      <PrivacySettingsModal
+        isOpen={privacyModalOpen}
+        onClose={() => setPrivacyModalOpen(false)}
+      />
     </header>
   );
 };

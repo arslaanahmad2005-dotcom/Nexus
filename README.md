@@ -164,7 +164,15 @@ The complete SQL schema with Row Level Security (RLS) policies is located at:
 - **Zero Sensitive Credential Requests:** NEXUS never asks for net-banking passwords, UPI PINs, Aadhaar numbers, or OTPs.
 - **Cryptographic Share Tokens:** Share links use 256-bit random tokens (`crypto.randomBytes(24)`). Only the SHA-256 hash is stored in the database.
 - **Privacy by Default:** Raw supporting documents are never linked to public share URLs unless explicitly requested.
-- **Owner Revocation:** The owner can revoke any share link instantly, terminating access server-side.
+- **Owner Revocation & Data Deletion:** The owner can revoke any share link instantly, and perform a full account purge (Right to be Forgotten) that erases all records, passports, and documents.
+
+> [!WARNING]
+> ### ⚠️ Security & Git History Notice: Rotate Any Previously Hardcoded Secrets Immediately
+> If any API keys, database connection strings, or service tokens were ever committed or stored in git history or unencrypted files in the past, consider them potentially compromised. **Rotate any active keys immediately** in your cloud provider consoles:
+> 1. **Google Gemini API Key:** If exposed, regenerate the key in [Google AI Studio](https://aistudio.google.com).
+> 2. **Supabase Anon & Service Role Keys:** Rotate JWT secrets in your Supabase Dashboard (`Project Settings -> API`).
+> 3. Ensure `.env` is strictly ignored in `.gitignore` (never commit live credentials). Only `.env.example` with blank placeholders should be committed.
+
 
 ---
 

@@ -14,6 +14,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string, occupation?: OccupationType) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
+  deleteAccount: () => Promise<{ success: boolean; error?: string }>;
   enterDemoMode: (personaKey?: 'priya' | 'aarav') => void;
   exitDemoMode: () => void;
   switchDemoPersona: (personaKey: 'priya' | 'aarav') => void;
@@ -57,8 +58,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(session.user);
             await fetchProfile(session.user.id);
           }
-        } catch (err) {
-          console.error('Error fetching Supabase session:', err);
+        } catch (_err) {
+          console.error('[NEXUS Auth] Session restore failure: [REDACTED]');
         }
       }
 
@@ -95,7 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('Error loading profile:', error);
+        console.error('[NEXUS Profile] Record fetch note: [REDACTED]');
       }
 
       if (data) {
@@ -110,8 +111,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updatedAt: data.updated_at
         });
       }
-    } catch (err) {
-      console.error('Failed to load profile:', err);
+    } catch (_err) {
+      console.error('[NEXUS Profile] Load profile error: [REDACTED]');
     }
   };
 
@@ -168,7 +169,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsDemoMode(false);
         localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
 
-        // Ensure profile record exists
         const newProf: UserProfile = {
           id: data.user.id,
           fullName,
@@ -238,8 +238,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (profile) {
         setProfile({ ...profile, ...updates });
       }
-    } catch (err) {
-      console.error('Error updating profile:', err);
+    } catch (_err) {
+      console.error('[NEXUS Profile] Update profile error: [REDACTED]');
+    }
+  };
+
+  // Full User Account Deletion & Right to be Forgotten
+  const deleteAccount = async (): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (isDemoMode) {
+        localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_PERSONA_KEY);
+        localStorage.removeItem(`nexus_demo_records_${currentPersonaKey}`);
+        localStorage.removeItem(`nexus_demo_passport_${currentPersonaKey}`);
+        setUser(null);
+        setProfile(null);
+        setIsDemoMode(false);
+        return { success: true };
+      }
+
+      if (user && isSupabaseConfigured) {
+        // 1. Purge server share links
+        try {
+          await fetch('/api/user/delete-account', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.id })
+          });
+        } catch (_err) {
+          // Continue with DB cascade
+        }
+
+        // 2. Delete profile from PostgreSQL (cascades all records, analyses, passports, docs, consents)
+        const { error: delError } = await supabase.from('profiles').delete().eq('id', user.id);
+        if (delError) {
+          return { success: false, error: delError.message };
+        }
+
+        // 3. Sign out session
+        await supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+        return { success: true };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error('[NEXUS Auth] Account deletion error: [REDACTED]');
+      return { success: false, error: err.message || 'Account deletion failed.' };
     }
   };
 
@@ -266,10 +312,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const resetDemoData = () => {
-    // Clear any customized demo storage and restore initial persona state
-    const persona = DEMO_PERSONAS[currentPersonaKey] || DEMO_PERSONAS.priya;
     localStorage.removeItem(`nexus_demo_records_${currentPersonaKey}`);
     localStorage.removeItem(`nexus_demo_passport_${currentPersonaKey}`);
+    const persona = DEMO_PERSONAS[currentPersonaKey] || DEMO_PERSONAS.priya;
     setProfile(persona.profile);
     window.location.reload();
   };
@@ -289,6 +334,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         signUp,
         signOut,
         updateProfile,
+        deleteAccount,
         enterDemoMode,
         exitDemoMode,
         switchDemoPersona,

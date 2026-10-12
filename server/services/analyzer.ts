@@ -2,33 +2,41 @@ import { GoogleGenAI } from '@google/genai';
 import { FinancialMetrics, FinancialRecord, AIAnalysisResult, OccupationType } from '../../src/types';
 import { formatINR } from '../../src/lib/calculations';
 
+interface AnonymousFinancialProfile {
+  occupation: OccupationType;
+  monthlyIncomeRange?: string;
+}
+
 interface AnalyzeOptions {
   records: FinancialRecord[];
   metrics: FinancialMetrics;
-  profile: {
-    fullName: string;
-    occupation: OccupationType;
-    monthlyIncomeRange?: string;
-  };
+  profile: AnonymousFinancialProfile;
+}
+
+function isValidApiKey(key?: string): boolean {
+  if (!key) return false;
+  const trimmed = key.trim();
+  return trimmed.length > 10 && !trimmed.startsWith('your_') && !trimmed.includes('placeholder');
 }
 
 export async function generateFinancialAnalysis(options: AnalyzeOptions): Promise<AIAnalysisResult> {
   const { metrics, profile } = options;
   const apiKey = process.env.GEMINI_API_KEY;
 
-  // If Gemini API key is configured, use Gemini
-  if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key_here') {
+  // Strict Privacy: Only aggregated metrics and occupation are sent to Gemini.
+  // User name, email, phone, individual transaction notes, and account IDs are NEVER included.
+  if (isValidApiKey(apiKey)) {
     try {
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({ apiKey: apiKey! });
 
       const prompt = `You are the AI Financial Clarity Advisor for NEXUS — a Financial Identity & Trust Network.
 Your task is to analyze the user's financial records and explain their money habits in simple, short, encouraging English that anyone without financial knowledge can understand.
 
-USER PROFILE:
+USER PROFILE (ANONYMIZED):
 - Occupation: ${profile.occupation}
 - Monthly Income Range: ${profile.monthlyIncomeRange || 'Not specified'}
 
-FINANCIAL SUMMARY (Calculated from user records):
+FINANCIAL SUMMARY (Aggregated from user records):
 - Total Recorded Income: ${formatINR(metrics.totalIncome)}
 - Total Recorded Expenses: ${formatINR(metrics.totalExpenses)}
 - Net Remaining Money: ${formatINR(metrics.netRemaining)}
@@ -52,14 +60,12 @@ CRITICAL RULES:
   "missingInformation": ["1-2 specific missing records that would make their passport more convincing to lenders"]
 }`;
 
-      // Call Gemini model
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt,
       });
 
       let responseText = response.text || '';
-      // Clean up markdown code blocks if returned
       responseText = responseText.replace(/```json/gi, '').replace(/```/g, '').trim();
 
       const parsed = JSON.parse(responseText);
@@ -76,13 +82,14 @@ CRITICAL RULES:
         source: 'gemini_api'
       };
     } catch (err: any) {
-      console.warn('Gemini API call encountered an issue, falling back to deterministic explanation engine:', err.message);
-      // Fallback to deterministic engine
+      // Safe logging: strip any API keys or tokens that might appear in error URL query params
+      const sanitizedMsg = (err?.message || 'AI request error').replace(/key=[^&\s]+/gi, 'key=[REDACTED]');
+      console.warn('[NEXUS AI] Gemini API issue, falling back to deterministic engine:', sanitizedMsg);
       return generateDeterministicAnalysis(options);
     }
   }
 
-  // Deterministic engine when API key is not configured
+  // Deterministic engine when API key is not configured or in local demo mode
   return generateDeterministicAnalysis(options);
 }
 

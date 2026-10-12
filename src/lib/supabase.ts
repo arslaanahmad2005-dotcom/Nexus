@@ -4,13 +4,14 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export const isSupabaseConfigured = Boolean(
-  supabaseUrl && 
-  supabaseAnonKey && 
-  supabaseUrl !== 'https://your-project-id.supabase.co' &&
-  !supabaseUrl.includes('placeholder')
+  supabaseUrl &&
+  supabaseAnonKey &&
+  !supabaseUrl.includes('placeholder') &&
+  !supabaseUrl.includes('your-project') &&
+  supabaseUrl.startsWith('https://')
 );
 
-// Fallback dummy client if credentials are not yet entered
+// Clean initialization strictly from environment variables without hardcoded fallback credentials
 export const supabase = isSupabaseConfigured
   ? createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -18,8 +19,12 @@ export const supabase = isSupabaseConfigured
         autoRefreshToken: true,
       },
     })
-  : createClient('https://mock-nexus.supabase.co', 'mock-anon-key', {
-      auth: {
-        persistSession: false,
-      },
-    });
+  : createClient(
+      supabaseUrl || 'https://unconfigured.local',
+      supabaseAnonKey || 'unconfigured',
+      {
+        auth: {
+          persistSession: false,
+        },
+      }
+    );

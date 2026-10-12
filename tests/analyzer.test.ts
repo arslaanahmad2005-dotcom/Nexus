@@ -37,7 +37,6 @@ describe('Financial AI Clarity Engine (Deterministic Mode)', () => {
       records,
       metrics,
       profile: {
-        fullName: 'Priya Sharma',
         occupation: 'Freelancer',
         monthlyIncomeRange: '₹30,000 - ₹60,000'
       }
@@ -82,7 +81,6 @@ describe('Financial AI Clarity Engine (Deterministic Mode)', () => {
       records,
       metrics,
       profile: {
-        fullName: 'Aarav Patel',
         occupation: 'Student'
       }
     });

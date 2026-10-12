@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import crypto from 'crypto';
 import { generateFinancialAnalysis } from './services/analyzer';
 import { calculateFinancialMetrics } from '../src/lib/calculations';
-import { FinancialPassport, PassportShareLink, SharedPassportView } from '../src/types';
+import { FinancialPassport, SharedPassportView } from '../src/types';
 
 // Load environment variables
 dotenv.config();
@@ -16,11 +16,11 @@ app.use(cors());
 app.use(express.json());
 
 // In-memory store for active share links and passports
-// (acts as local server persistence for development & works seamlessly with Supabase in production)
 interface StoredShareLink {
   id: string;
   shareTokenHash: string;
   passportId: string;
+  userId: string;
   recipientLabel: string;
   includedFields: string[];
   expiresAt: string;
@@ -38,13 +38,15 @@ function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
-// 1. Health check
+function isValidApiKey(key?: string): boolean {
+  if (!key) return false;
+  const trimmed = key.trim();
+  return trimmed.length > 10 && !trimmed.startsWith('your_') && !trimmed.includes('placeholder');
+}
+
+// 1. Health check (Only returns boolean configuration status without exposing secrets)
 app.get('/api/health', (_req: Request, res: Response) => {
-  const hasGemini = Boolean(
-    process.env.GEMINI_API_KEY &&
-    process.env.GEMINI_API_KEY.trim() !== '' &&
-    process.env.GEMINI_API_KEY !== 'your_gemini_api_key_here'
-  );
+  const hasGemini = isValidApiKey(process.env.GEMINI_API_KEY);
 
   res.json({
     status: 'healthy',
@@ -76,16 +78,16 @@ app.post('/api/analyze-finances', async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // 1. Calculate deterministic metrics
+    // 1. Calculate deterministic metrics in trusted server code
     const metrics = calculateFinancialMetrics(records);
 
-    // 2. Run AI generation (Gemini or deterministic engine)
+    // 2. Anonymize profile before analysis (only occupation and bracket, no full names/emails)
     const analysis = await generateFinancialAnalysis({
       records,
       metrics,
-      profile: profile || {
-        fullName: 'Nexus User',
-        occupation: 'Freelancer'
+      profile: {
+        occupation: profile?.occupation || 'Freelancer',
+        monthlyIncomeRange: profile?.monthlyIncomeRange
       }
     });
 
@@ -94,11 +96,11 @@ app.post('/api/analyze-finances', async (req: Request, res: Response): Promise<v
       analysis
     });
   } catch (error: any) {
-    console.error('Error analyzing finances:', error);
+    // Sanitize server error logs to prevent leaking request payloads or tokens
+    console.error('[NEXUS Server] Analysis error: [REDACTED]');
     res.status(500).json({
       error: 'ANALYSIS_FAILED',
-      message: 'An unexpected error occurred while analyzing financial records. Please try again.',
-      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      message: 'An unexpected error occurred while analyzing financial records. Please try again.'
     });
   }
 });
@@ -106,7 +108,7 @@ app.post('/api/analyze-finances', async (req: Request, res: Response): Promise<v
 // 3. Create Secure Passport Share Link
 app.post('/api/passport/share', (req: Request, res: Response): Promise<void> => {
   try {
-    const { passport, recipientLabel, includedFields, expiresInHours = 72 } = req.body;
+    const { passport, recipientLabel, includedFields, expiresInHours = 72, userId } = req.body;
 
     if (!passport || !passport.id) {
       res.status(400).json({
@@ -128,7 +130,8 @@ app.post('/api/passport/share', (req: Request, res: Response): Promise<void> => 
       id: shareId,
       shareTokenHash: tokenHash,
       passportId: passport.id,
-      recipientLabel: recipientLabel || 'Public Verification',
+      userId: userId || passport.userId || 'anonymous-owner',
+      recipientLabel: recipientLabel ? String(recipientLabel).slice(0, 80) : 'Public Verification',
       includedFields: Array.isArray(includedFields) && includedFields.length > 0 
         ? includedFields 
         : ['summary', 'income_consistency', 'repayments', 'actionable_suggestions'],
@@ -153,7 +156,7 @@ app.post('/api/passport/share', (req: Request, res: Response): Promise<void> => 
       includedFields: storedRecord.includedFields
     });
   } catch (error: any) {
-    console.error('Error creating share link:', error);
+    console.error('[NEXUS Server] Share link generation error: [REDACTED]');
     res.status(500).json({
       error: 'SHARE_FAILED',
       message: 'Failed to generate secure share link.'
@@ -161,7 +164,7 @@ app.post('/api/passport/share', (req: Request, res: Response): Promise<void> => 
   }
 });
 
-// 4. Public Read-only Shared Passport Reader
+// 4. Public Read-only Shared Passport Reader (Strict Field Filtering)
 app.get('/api/passport/shared/:token', (req: Request, res: Response): Promise<void> => {
   try {
     const { token } = req.params;
@@ -204,7 +207,7 @@ app.get('/api/passport/shared/:token', (req: Request, res: Response): Promise<vo
     const passport = link.passportData;
     const included = link.includedFields;
 
-    // Filter fields strictly based on owner-specified consent
+    // Strict Field-Level Filtering: Never exposes user auth IDs, emails, passwords, or raw uploaded files
     const view: SharedPassportView = {
       shareId: link.id,
       recipientLabel: link.recipientLabel,
@@ -219,17 +222,17 @@ app.get('/api/passport/shared/:token', (req: Request, res: Response): Promise<vo
       includedFields: link.includedFields,
       passportData: {
         metrics: {
-          totalIncome: included.includes('summary') ? passport.metrics.totalIncome : undefined,
-          totalExpenses: included.includes('summary') ? passport.metrics.totalExpenses : undefined,
-          netRemaining: included.includes('summary') ? passport.metrics.netRemaining : undefined,
-          savingsRate: included.includes('summary') ? passport.metrics.savingsRate : undefined,
-          incomeConsistencyScore: included.includes('income_consistency') ? passport.metrics.incomeConsistencyScore : undefined,
-          incomeConsistencyRating: included.includes('income_consistency') ? passport.metrics.incomeConsistencyRating : undefined,
-          monthlyBreakdown: included.includes('income_consistency') ? passport.metrics.monthlyBreakdown : [],
-          topExpenseCategories: included.includes('expense_breakdown') ? passport.metrics.topExpenseCategories : [],
-          repaymentsCount: included.includes('repayments') ? passport.metrics.repaymentsCount : undefined,
-          repaymentsTotal: included.includes('repayments') ? passport.metrics.repaymentsTotal : undefined,
-          repaymentRegularityScore: included.includes('repayments') ? passport.metrics.repaymentRegularityScore : undefined
+          totalIncome: included.includes('summary') ? passport.metrics?.totalIncome : undefined,
+          totalExpenses: included.includes('summary') ? passport.metrics?.totalExpenses : undefined,
+          netRemaining: included.includes('summary') ? passport.metrics?.netRemaining : undefined,
+          savingsRate: included.includes('summary') ? passport.metrics?.savingsRate : undefined,
+          incomeConsistencyScore: included.includes('income_consistency') ? passport.metrics?.incomeConsistencyScore : undefined,
+          incomeConsistencyRating: included.includes('income_consistency') ? passport.metrics?.incomeConsistencyRating : undefined,
+          monthlyBreakdown: included.includes('income_consistency') ? passport.metrics?.monthlyBreakdown : [],
+          topExpenseCategories: included.includes('expense_breakdown') ? passport.metrics?.topExpenseCategories : [],
+          repaymentsCount: included.includes('repayments') ? passport.metrics?.repaymentsCount : undefined,
+          repaymentsTotal: included.includes('repayments') ? passport.metrics?.repaymentsTotal : undefined,
+          repaymentRegularityScore: included.includes('repayments') ? passport.metrics?.repaymentRegularityScore : undefined
         },
         insights: {
           summary: passport.aiInsights?.summary,
@@ -246,7 +249,7 @@ app.get('/api/passport/shared/:token', (req: Request, res: Response): Promise<vo
       passport: view
     });
   } catch (error: any) {
-    console.error('Error fetching shared passport:', error);
+    console.error('[NEXUS Server] Fetch shared passport error: [REDACTED]');
     res.status(500).json({
       error: 'SERVER_ERROR',
       message: 'Failed to retrieve shared passport.'
@@ -287,12 +290,38 @@ app.post('/api/passport/revoke', (req: Request, res: Response): Promise<void> =>
       revokedAt: targetLink.revokedAt
     });
   } catch (error: any) {
-    console.error('Error revoking share link:', error);
+    console.error('[NEXUS Server] Revoke error: [REDACTED]');
     res.status(500).json({ error: 'REVOKE_FAILED', message: 'Failed to revoke link.' });
   }
 });
 
+// 6. User Data Deletion & Account Purge (Right to be Forgotten)
+app.post('/api/user/delete-account', (req: Request, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.body;
+    if (!userId) {
+      res.status(400).json({ error: 'USER_ID_REQUIRED', message: 'User ID is required for deletion.' });
+      return;
+    }
+
+    // Purge any active share links created by this user
+    for (const [key, link] of shareStore.entries()) {
+      if (link.userId === userId || link.passportData?.userId === userId) {
+        shareStore.delete(key);
+      }
+    }
+
+    res.json({
+      success: true,
+      message: 'All associated server sessions and active share links have been purged.'
+    });
+  } catch (error: any) {
+    console.error('[NEXUS Server] Account deletion purge error: [REDACTED]');
+    res.status(500).json({ error: 'PURGE_FAILED', message: 'Failed to purge account data.' });
+  }
+});
+
 app.listen(PORT, () => {
-  console.log(`[NEXUS Server] Secure API running on http://localhost:${PORT}`);
-  console.log(`[NEXUS Server] Gemini AI Engine: ${process.env.GEMINI_API_KEY ? 'Active' : 'Deterministic Mode'}`);
+  console.log(`[NEXUS Server] Secure API running on port ${PORT}`);
+  console.log(`[NEXUS Server] Gemini AI Engine: ${isValidApiKey(process.env.GEMINI_API_KEY) ? 'Active' : 'Deterministic Mode'}`);
 });
