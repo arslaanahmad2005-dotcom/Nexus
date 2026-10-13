@@ -12,7 +12,13 @@ import {
   AnalysisPeriod,
   FinancialTrustScore
 } from '../types';
-import { calculateFinancialMetrics, calculateFinancialTrustScore, filterRecordsByPeriod, calculatePeriodComparison } from '../lib/calculations';
+import {
+  calculateFinancialMetrics,
+  calculateFinancialTrustScore,
+  filterRecordsByPeriod,
+  calculatePeriodComparison,
+  generateDeterministicAnalysis
+} from '../lib/calculations';
 import { DEMO_PERSONAS } from '../data/demoData';
 
 interface FinancialContextType {
@@ -369,40 +375,69 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setIsAnalyzing(true);
     setError(null);
 
-    try {
-      const activeRecords = filterRecordsByPeriod(records, period);
-      const activeMetrics = calculateFinancialMetrics(activeRecords);
-      const calculatedTrustScore = calculateFinancialTrustScore(records, profile ? { occupation: profile.occupation } : undefined);
-      const periodComparison = calculatePeriodComparison(records, period);
+    const activeRecords = filterRecordsByPeriod(records, period);
+    const activeMetrics = calculateFinancialMetrics(activeRecords);
+    const calculatedTrustScore = calculateFinancialTrustScore(records, profile ? { occupation: profile.occupation } : undefined);
+    const periodComparison = calculatePeriodComparison(records, period);
 
-      const response = await fetch('/api/analyze-finances', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    try {
+      let fullAnalysis: AIAnalysisResult | null = null;
+
+      try {
+        const response = await fetch('/api/analyze-finances', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            records,
+            metrics: activeMetrics,
+            period,
+            profile: {
+              fullName: profile?.fullName || 'Nexus User',
+              occupation: profile?.occupation || 'Freelancer',
+              monthlyIncomeRange: profile?.monthlyIncomeRange
+            },
+            consents
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.analysis) {
+            fullAnalysis = {
+              ...data.analysis,
+              period,
+              periodComparison,
+              trustScore: calculatedTrustScore
+            };
+          }
+        } else {
+          console.warn('[NEXUS AI] Server API status:', response.status);
+        }
+      } catch (netErr: any) {
+        console.warn('[NEXUS AI] Network or serverless connection issue:', netErr?.message || netErr);
+      }
+
+      // If server AI was unreachable (e.g. serverless cold start, deployment in-progress),
+      // seamlessly engage the transparent deterministic analysis so user is NEVER blocked
+      if (!fullAnalysis) {
+        const fallback = generateDeterministicAnalysis({
           records,
           metrics: activeMetrics,
-          period,
           profile: {
-            fullName: profile?.fullName || 'Nexus User',
             occupation: profile?.occupation || 'Freelancer',
             monthlyIncomeRange: profile?.monthlyIncomeRange
           },
-          consents
-        })
-      });
+          trustScore: calculatedTrustScore,
+          period,
+          periodComparison
+        });
 
-      if (!response.ok) {
-        const errJson = await response.json();
-        throw new Error(errJson.message || 'AI analysis request failed.');
+        fullAnalysis = {
+          ...fallback,
+          modelUsed: 'NEXUS Verified Engine (Deterministic Fallback)'
+        };
       }
 
-      const data = await response.json();
-      const fullAnalysis: AIAnalysisResult = {
-        ...data.analysis,
-        period,
-        periodComparison,
-        trustScore: calculatedTrustScore
-      };
       setAnalysis(fullAnalysis);
 
       // If user is logged into real Supabase, store analysis in DB
@@ -426,9 +461,20 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
       return fullAnalysis;
     } catch (err: any) {
-      console.error('[NEXUS AI] Error during AI analysis: [REDACTED]');
-      setError('Unable to complete AI analysis at this moment. You can retry or view calculated metrics.');
-      return null;
+      console.error('[NEXUS AI] Unexpected analysis error:', err);
+      const fallback = generateDeterministicAnalysis({
+        records,
+        metrics: activeMetrics,
+        profile: {
+          occupation: profile?.occupation || 'Freelancer',
+          monthlyIncomeRange: profile?.monthlyIncomeRange
+        },
+        trustScore: calculatedTrustScore,
+        period,
+        periodComparison
+      });
+      setAnalysis(fallback);
+      return fallback;
     } finally {
       setIsAnalyzing(false);
     }

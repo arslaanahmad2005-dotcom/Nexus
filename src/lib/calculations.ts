@@ -7,7 +7,8 @@ import {
   TrustScoreBreakdown,
   TrustTip,
   AnalysisPeriod,
-  PeriodComparison
+  PeriodComparison,
+  AIAnalysisResult
 } from '../types';
 
 export function calculateFinancialMetrics(records: FinancialRecord[]): FinancialMetrics {
@@ -889,3 +890,131 @@ export function formatINR(amount: number): string {
 
   return `${isNegative ? '-₹' : '₹'}${formatted}`;
 }
+
+export interface DeterministicAnalysisOptions {
+  records?: FinancialRecord[];
+  metrics: FinancialMetrics;
+  profile: {
+    occupation: string;
+    monthlyIncomeRange?: string;
+  };
+  trustScore?: FinancialTrustScore;
+  period?: AnalysisPeriod;
+  periodComparison?: PeriodComparison;
+}
+
+export function generateDeterministicAnalysis(options: DeterministicAnalysisOptions): AIAnalysisResult {
+  const { metrics, profile, trustScore, period, periodComparison } = options;
+
+  const topCategory = metrics.topExpenseCategories[0];
+  const secondCategory = metrics.topExpenseCategories[1];
+  const netPositive = metrics.netRemaining > 0;
+  const isFreelancerOrGig = profile.occupation === 'Freelancer' || profile.occupation === 'Gig Worker';
+
+  // 1. Construct simple summary ("Your Money at a Glance")
+  let summary = '';
+  if (netPositive) {
+    summary = `Your recorded income is ${formatINR(metrics.netRemaining)} higher than your expenses across ${metrics.monthsTracked} month${metrics.monthsTracked > 1 ? 's' : ''}. That demonstrates you are living comfortably within your means with cash remaining.`;
+    if (topCategory) {
+      summary += ` ${topCategory.category} is your largest expense, accounting for ${topCategory.percentage}% of what you spend.`;
+    }
+  } else if (metrics.totalIncome > 0 && metrics.netRemaining === 0) {
+    summary = `Your recorded income matches your expenses exactly. You are breaking even, but there is limited breathing room for unexpected emergencies.`;
+  } else if (metrics.totalIncome > 0 && metrics.netRemaining < 0) {
+    summary = `Your expenses are currently ${formatINR(Math.abs(metrics.netRemaining))} higher than your recorded income. Reviewing discretionary spending will help restore cashflow balance.`;
+  } else {
+    summary = `You have added initial financial records, but additional income entries are needed to provide a full cashflow analysis.`;
+  }
+
+  // 2. Positive indicators ("What You Are Doing Well")
+  const positiveIndicators: string[] = [];
+  if (netPositive) {
+    positiveIndicators.push(`Positive cash cushion: You retain approximately ${metrics.savingsRate}% of the money you make.`);
+  }
+  if (metrics.incomeConsistencyScore >= 75) {
+    positiveIndicators.push(`Reliable earnings pattern: Your income demonstrates dependable month-to-month regularity (${metrics.incomeConsistencyRating}).`);
+  } else if (metrics.totalIncome > 0) {
+    positiveIndicators.push(`Active earning record: Multiple entries confirm active economic participation as a ${profile.occupation}.`);
+  }
+  if (metrics.repaymentsCount > 0) {
+    positiveIndicators.push(`Disciplined repayment: You have ${metrics.repaymentsCount} recorded on-time payments totaling ${formatINR(metrics.repaymentsTotal)}.`);
+  } else {
+    positiveIndicators.push(`Zero recorded default notices or missed payment flags.`);
+  }
+
+  // 3. Where Your Money Goes
+  let expenseBreakdownInsight = '';
+  if (topCategory) {
+    expenseBreakdownInsight = `Your spending is concentrated primarily in ${topCategory.category} (${formatINR(topCategory.total)}, ${topCategory.percentage}%)`;
+    if (secondCategory) {
+      expenseBreakdownInsight += ` followed by ${secondCategory.category} (${formatINR(secondCategory.total)}, ${secondCategory.percentage}%).`;
+    } else {
+      expenseBreakdownInsight += `.`;
+    }
+    if (periodComparison?.hasPreviousPeriodData && periodComparison.expenseChangePercentage !== undefined) {
+      const dir = periodComparison.expenseChangePercentage >= 0 ? 'increased' : 'decreased';
+      expenseBreakdownInsight += ` Overall monthly expenses have ${dir} by ${Math.abs(periodComparison.expenseChangePercentage)}% compared to last month.`;
+    }
+  } else {
+    expenseBreakdownInsight = 'No specific expense categories recorded yet. Adding daily expenses will unlock spending breakdown analysis.';
+  }
+
+  // 4. Areas for attention ("What Needs Attention")
+  const areasForAttention: string[] = [];
+  if (topCategory && topCategory.percentage >= 40) {
+    areasForAttention.push(`High concentration in ${topCategory.category}: ${topCategory.percentage}% of your expenses go here. A small reduction can strengthen your cash cushion.`);
+  }
+  if (metrics.expenseToIncomeRatio > 85) {
+    areasForAttention.push(`Tight expense margin: You spend ${metrics.expenseToIncomeRatio}% of what you make, leaving limited room for unplanned emergencies.`);
+  }
+  if (metrics.monthsTracked < 3) {
+    areasForAttention.push(`Short tracking history: Verification partners prefer seeing at least 3 months of consistent records.`);
+  }
+  if (metrics.repaymentsCount === 0) {
+    areasForAttention.push(`No repayment records: Logging bills or rent will verify repayment reliability.`);
+  }
+
+  // 5. Practical suggestions ("Your Next Three Steps")
+  const actionableSuggestions: string[] = [];
+  if (isFreelancerOrGig) {
+    actionableSuggestions.push(`Log each freelance milestone and client retainer to document continuous income stability.`);
+  } else {
+    actionableSuggestions.push(`Aim to set aside a modest reserve as soon as income arrives to formalize your emergency fund.`);
+  }
+  if (topCategory) {
+    actionableSuggestions.push(`Review everyday spending in ${topCategory.category} for two weeks to find opportunities to conserve ₹500 to ₹1,500.`);
+  }
+  actionableSuggestions.push(`Record all regular rent, utility, and mobile recharge receipts as proof of scheduled payment discipline.`);
+
+  // 6. Financial Trust Score explanation
+  let trustScoreExplanation = '';
+  if (trustScore && trustScore.status !== 'insufficient_data') {
+    trustScoreExplanation = `Your Financial Trust Score is currently ${trustScore.score}/100 (${trustScore.label}). This reflects ${trustScore.breakdown.incomeConsistency.score}/30 for income consistency, ${trustScore.breakdown.savingsHabits.score}/25 for savings habits, ${trustScore.breakdown.repaymentHistory.score}/25 for repayment history, and ${trustScore.breakdown.expenseManagement.score}/20 for expense management.`;
+  } else {
+    trustScoreExplanation = 'Your Financial Trust Score is awaiting additional entries. Adding income and expense records across 3+ entries will generate your provisional score.';
+  }
+
+  // 7. Missing information ("What Information Is Missing")
+  const missingInformation: string[] = [...metrics.dataSufficiency.missingAreas];
+  if (missingInformation.length === 0) {
+    missingInformation.push('Add a utility bill or rent payment record as additional supporting proof.');
+  }
+
+  return {
+    summary,
+    positiveIndicators: positiveIndicators.slice(0, 3),
+    expenseBreakdownInsight,
+    areasForAttention: areasForAttention.slice(0, 2),
+    actionableSuggestions: actionableSuggestions.slice(0, 3),
+    trustScoreExplanation,
+    missingInformation: missingInformation.slice(0, 2),
+    period,
+    periodComparison,
+    metrics,
+    trustScore,
+    modelUsed: 'Deterministic Financial Clarity Engine',
+    generatedAt: new Date().toISOString(),
+    source: 'deterministic_engine'
+  };
+}
+

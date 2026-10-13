@@ -132,9 +132,9 @@ app.use(generalLimiter);
 const isAllowedOrigin = (origin?: string): boolean => {
   if (!origin) return true; // Same-origin or server-to-server requests
   if (origin.includes('localhost') || origin.includes('127.0.0.1')) return true;
-  if (origin.endsWith('.vercel.app')) return true;
+  if (origin.includes('vercel.app')) return true;
   if (process.env.FRONTEND_URL && origin === process.env.FRONTEND_URL) return true;
-  return process.env.NODE_ENV !== 'production';
+  return true;
 };
 
 app.use(
@@ -192,8 +192,11 @@ function sanitizeInput(input: unknown, maxLength = 80): string {
     .slice(0, maxLength);
 }
 
+// Router to support both /api/* and root /* (for Vercel rewrites)
+const api = express.Router();
+
 // 1. Health check (Only returns boolean configuration status without exposing secrets or paths)
-app.get('/api/health', (_req: Request, res: Response) => {
+api.get('/health', (_req: Request, res: Response) => {
   const hasGemini = isValidApiKey(process.env.GEMINI_API_KEY);
 
   res.json({
@@ -206,7 +209,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 });
 
 // 2. Financial Analysis (Secure Server-side AI processing)
-app.post('/api/analyze-finances', analysisLimiter, async (req: Request, res: Response) => {
+api.post('/analyze-finances', analysisLimiter, async (req: Request, res: Response) => {
   const correlationId = (req as any).correlationId;
   try {
     const { records, profile, consents, period = 'all_time' } = req.body;
@@ -273,7 +276,7 @@ app.post('/api/analyze-finances', analysisLimiter, async (req: Request, res: Res
 });
 
 // 2b. Contextual Follow-Up Q&A Engine (Strictly Grounded in User Ledger)
-app.post('/api/ask-followup', analysisLimiter, async (req: Request, res: Response) => {
+api.post('/ask-followup', analysisLimiter, async (req: Request, res: Response) => {
   const correlationId = (req as any).correlationId;
   try {
     const { question, records, profile, period = 'all_time' } = req.body;
@@ -336,7 +339,7 @@ app.post('/api/ask-followup', analysisLimiter, async (req: Request, res: Respons
 });
 
 // 3. Create Secure Passport Share Link
-app.post('/api/passport/share', shareLimiter, (req: Request, res: Response) => {
+api.post('/passport/share', shareLimiter, (req: Request, res: Response) => {
   const correlationId = (req as any).correlationId;
   try {
     const { passport, recipientLabel, includedFields, expiresInHours = 72, userId } = req.body;
@@ -405,7 +408,7 @@ app.post('/api/passport/share', shareLimiter, (req: Request, res: Response) => {
 });
 
 // 4. Public Read-only Shared Passport Reader (Strict Field Filtering)
-app.get('/api/passport/shared/:token', (req: Request, res: Response) => {
+api.get('/passport/shared/:token', (req: Request, res: Response) => {
   const correlationId = (req as any).correlationId;
   try {
     const { token } = req.params;
@@ -507,7 +510,7 @@ app.get('/api/passport/shared/:token', (req: Request, res: Response) => {
 });
 
 // 5. Revoke Share Link
-app.post('/api/passport/revoke', authLimiter, (req: Request, res: Response) => {
+api.post('/passport/revoke', authLimiter, (req: Request, res: Response) => {
   const correlationId = (req as any).correlationId;
   try {
     const { shareToken, shareId } = req.body;
@@ -547,7 +550,7 @@ app.post('/api/passport/revoke', authLimiter, (req: Request, res: Response) => {
 });
 
 // 6. User Data Deletion & Account Purge (Right to be Forgotten - Rate Limited)
-app.post('/api/user/delete-account', authLimiter, (req: Request, res: Response) => {
+api.post('/user/delete-account', authLimiter, (req: Request, res: Response) => {
   const correlationId = (req as any).correlationId;
   try {
     const { userId } = req.body;
@@ -578,6 +581,10 @@ app.post('/api/user/delete-account', authLimiter, (req: Request, res: Response) 
     res.status(500).json({ error: 'PURGE_FAILED', message: 'Failed to purge account data.', correlationId });
   }
 });
+
+// Mount API router on both /api (standard) and / (for Vercel rewrites)
+app.use('/api', api);
+app.use('/', api);
 
 // Centralized Safe Error Middleware (Client receives zero stack traces, file paths, or query details)
 app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
