@@ -159,6 +159,8 @@ export const MyMoneyPage: React.FC = () => {
       if (ok) {
         setEditingRecord(null);
         showToast('Record updated successfully.');
+      } else {
+        setFormError('Failed to update record. Please verify fields and try again.');
       }
     } else {
       const ok = await addRecord({
@@ -172,7 +174,11 @@ export const MyMoneyPage: React.FC = () => {
       setIsSubmitting(false);
       if (ok) {
         setIsAddModalOpen(false);
+        setFormAmount('');
+        setFormDescription('');
         showToast('New financial record added successfully.');
+      } else {
+        setFormError('Failed to save record. Please check the amount and date.');
       }
     }
   };

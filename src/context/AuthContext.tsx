@@ -46,7 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setIsDemoMode(true);
         setCurrentPersonaKey(savedPersona);
         setUser({ id: persona.profile.id, email: `${savedPersona}@nexus-demo.local` });
-        setProfile(persona.profile);
+        const savedDemoProf = localStorage.getItem(`nexus_demo_profile_${savedPersona}`);
+        if (savedDemoProf) {
+          try {
+            setProfile(JSON.parse(savedDemoProf));
+          } catch {
+            setProfile(persona.profile);
+          }
+        } else {
+          setProfile(persona.profile);
+        }
         setIsLoading(false);
         return;
       }
@@ -87,6 +96,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [isDemoMode]);
 
   const fetchProfile = async (userId: string) => {
+    // 1. Check local cache first for instant responsiveness
+    const cached = localStorage.getItem(`nexus_user_profile_${userId}`);
+    if (cached) {
+      try {
+        setProfile(JSON.parse(cached));
+      } catch {
+        // ignore parse error
+      }
+    }
+
     if (!isSupabaseConfigured) return;
     try {
       const { data, error } = await supabase
@@ -96,11 +115,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (error && error.code !== 'PGRST116') {
-        console.error('[NEXUS Profile] Record fetch note: [REDACTED]');
+        console.warn('[NEXUS Profile] Supabase profile note:', error.message);
       }
 
       if (data) {
-        setProfile({
+        const loadedProf: UserProfile = {
           id: data.id,
           fullName: data.full_name,
           occupation: data.occupation || 'Freelancer',
@@ -109,10 +128,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           onboardingCompleted: data.onboarding_completed ?? false,
           createdAt: data.created_at,
           updatedAt: data.updated_at
-        });
+        };
+        setProfile(loadedProf);
+        localStorage.setItem(`nexus_user_profile_${userId}`, JSON.stringify(loadedProf));
+      } else if (!cached && user) {
+        // If profile row doesn't exist yet, synthesize one from user credentials
+        const meta = user.user_metadata || {};
+        const fallbackProf: UserProfile = {
+          id: userId,
+          fullName: meta.full_name || user.email?.split('@')[0] || 'Nexus Member',
+          occupation: meta.occupation || 'Freelancer',
+          monthlyIncomeRange: '',
+          location: '',
+          onboardingCompleted: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        setProfile(fallbackProf);
+        localStorage.setItem(`nexus_user_profile_${userId}`, JSON.stringify(fallbackProf));
       }
     } catch (_err) {
-      console.error('[NEXUS Profile] Load profile error: [REDACTED]');
+      console.warn('[NEXUS Profile] Load profile exception handled safely');
     }
   };
 
@@ -214,32 +250,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
+    const now = new Date().toISOString();
+    const updatedProfile: UserProfile = {
+      id: user?.id || (isDemoMode ? currentDemoPersona?.profile.id : 'user-local') || 'user-local',
+      fullName: updates.fullName || profile?.fullName || user?.email?.split('@')[0] || 'Nexus Member',
+      occupation: updates.occupation || profile?.occupation || 'Freelancer',
+      monthlyIncomeRange: updates.monthlyIncomeRange !== undefined ? updates.monthlyIncomeRange : profile?.monthlyIncomeRange || '',
+      location: updates.location !== undefined ? updates.location : profile?.location || '',
+      onboardingCompleted: updates.onboardingCompleted !== undefined ? updates.onboardingCompleted : profile?.onboardingCompleted ?? false,
+      createdAt: profile?.createdAt || now,
+      ...(profile || {}),
+      ...updates,
+      updatedAt: now
+    };
+
+    setProfile(updatedProfile);
+
     if (isDemoMode) {
-      if (profile) {
-        setProfile({ ...profile, ...updates, updatedAt: new Date().toISOString() });
-      }
+      localStorage.setItem(`nexus_demo_profile_${currentPersonaKey}`, JSON.stringify(updatedProfile));
       return;
     }
 
-    if (!user || !isSupabaseConfigured) return;
+    if (user) {
+      localStorage.setItem(`nexus_user_profile_${user.id}`, JSON.stringify(updatedProfile));
+    }
 
-    try {
-      const payload: any = {
-        updated_at: new Date().toISOString()
-      };
-      if (updates.fullName !== undefined) payload.full_name = updates.fullName;
-      if (updates.occupation !== undefined) payload.occupation = updates.occupation;
-      if (updates.monthlyIncomeRange !== undefined) payload.monthly_income_range = updates.monthlyIncomeRange;
-      if (updates.location !== undefined) payload.location = updates.location;
-      if (updates.onboardingCompleted !== undefined) payload.onboarding_completed = updates.onboardingCompleted;
+    if (user && isSupabaseConfigured) {
+      try {
+        const payload: any = {
+          id: user.id,
+          updated_at: now
+        };
+        if (updates.fullName !== undefined) payload.full_name = updates.fullName;
+        if (updates.occupation !== undefined) payload.occupation = updates.occupation;
+        if (updates.monthlyIncomeRange !== undefined) payload.monthly_income_range = updates.monthlyIncomeRange;
+        if (updates.location !== undefined) payload.location = updates.location;
+        if (updates.onboardingCompleted !== undefined) payload.onboarding_completed = updates.onboardingCompleted;
 
-      await supabase.from('profiles').update(payload).eq('id', user.id);
-
-      if (profile) {
-        setProfile({ ...profile, ...updates });
+        await supabase.from('profiles').upsert(payload);
+      } catch (_err: any) {
+        console.warn('[NEXUS Profile] Background profile upsert notice:', _err?.message);
       }
-    } catch (_err) {
-      console.error('[NEXUS Profile] Update profile error: [REDACTED]');
     }
   };
 
@@ -251,6 +302,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem(LOCAL_STORAGE_PERSONA_KEY);
         localStorage.removeItem(`nexus_demo_records_${currentPersonaKey}`);
         localStorage.removeItem(`nexus_demo_passport_${currentPersonaKey}`);
+        localStorage.removeItem(`nexus_demo_profile_${currentPersonaKey}`);
         setUser(null);
         setProfile(null);
         setIsDemoMode(false);
@@ -296,7 +348,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem(LOCAL_STORAGE_DEMO_KEY, 'true');
     localStorage.setItem(LOCAL_STORAGE_PERSONA_KEY, personaKey);
     setUser({ id: persona.profile.id, email: `${personaKey}@nexus-demo.local` });
-    setProfile(persona.profile);
+    const savedDemoProf = localStorage.getItem(`nexus_demo_profile_${personaKey}`);
+    if (savedDemoProf) {
+      try {
+        setProfile(JSON.parse(savedDemoProf));
+      } catch {
+        setProfile(persona.profile);
+      }
+    } else {
+      setProfile(persona.profile);
+    }
   };
 
   const exitDemoMode = () => {
@@ -313,7 +374,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resetDemoData = () => {
     localStorage.removeItem(`nexus_demo_records_${currentPersonaKey}`);
+    localStorage.removeItem(`nexus_demo_records_demo-${currentPersonaKey}-sharma`);
+    localStorage.removeItem(`nexus_demo_records_demo-${currentPersonaKey}-patel`);
     localStorage.removeItem(`nexus_demo_passport_${currentPersonaKey}`);
+    localStorage.removeItem(`nexus_demo_passport_demo-${currentPersonaKey}-sharma`);
+    localStorage.removeItem(`nexus_demo_passport_demo-${currentPersonaKey}-patel`);
+    localStorage.removeItem(`nexus_demo_profile_${currentPersonaKey}`);
     const persona = DEMO_PERSONAS[currentPersonaKey] || DEMO_PERSONAS.priya;
     setProfile(persona.profile);
     window.location.reload();

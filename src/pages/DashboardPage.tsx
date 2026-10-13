@@ -462,8 +462,17 @@ export const DashboardPage: React.FC = () => {
             </table>
           </div>
         ) : (
-          <div className="text-center py-8 text-xs text-slate-500 dark:text-slate-400">
-            No transactions entered yet. Click "Add First Record" above.
+          <div className="text-center py-10 px-4 space-y-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              No transactions entered yet. Start adding your income and expenses to unlock your Financial Trust Score and Passport.
+            </p>
+            <Link
+              to="/my-money"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-semibold text-xs transition-colors shadow-sm"
+            >
+              <PlusCircle className="w-3.5 h-3.5" />
+              <span>Add First Financial Record</span>
+            </Link>
           </div>
         )}
       </Card>
