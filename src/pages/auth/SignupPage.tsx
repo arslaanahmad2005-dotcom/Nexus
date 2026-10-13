@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShieldCheck, AlertCircle, Eye } from 'lucide-react';
+import { ShieldCheck, AlertCircle, Eye, MailCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { OccupationType } from '../../types';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 
 export const SignupPage: React.FC = () => {
-  const { signUp, enterDemoMode, isSupabaseConnected } = useAuth();
+  const { signUp, resendVerificationEmail, enterDemoMode, isSupabaseConnected } = useAuth();
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState('');
@@ -16,6 +16,10 @@ export const SignupPage: React.FC = () => {
   const [occupation, setOccupation] = useState<OccupationType>('Freelancer');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [emailConfirmationSent, setEmailConfirmationSent] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,13 +35,27 @@ export const SignupPage: React.FC = () => {
     setIsLoading(true);
     setErrorMessage(null);
 
-    const { error } = await signUp(email, password, fullName, occupation);
+    const res = await signUp(email, password, fullName, occupation);
     setIsLoading(false);
 
-    if (error) {
-      setErrorMessage(error);
+    if (res.error) {
+      setErrorMessage(res.error);
+    } else if (res.requiresEmailConfirmation) {
+      setEmailConfirmationSent(true);
     } else {
       navigate('/onboarding');
+    }
+  };
+
+  const handleResend = async () => {
+    setResending(true);
+    setResendStatus(null);
+    const { error } = await resendVerificationEmail(email);
+    setResending(false);
+    if (error) {
+      setResendStatus(`Failed to resend: ${error}`);
+    } else {
+      setResendStatus('Verification link re-sent! Please check your inbox.');
     }
   };
 
@@ -59,121 +77,167 @@ export const SignupPage: React.FC = () => {
           </p>
         </div>
 
-        <Card>
-          {!isSupabaseConnected && (
-            <div className="mb-5 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
-              <div>
-                <strong className="font-semibold block text-amber-900 dark:text-amber-100">Supabase Not Connected</strong>
-                <span>
-                  To create new permanent accounts in PostgreSQL, configure your Supabase URL & Key in <code className="bg-amber-100 dark:bg-amber-900/50 px-1 py-0.5 rounded text-amber-900 dark:text-amber-200">.env</code>. You can also explore right away in Judge Demo Mode.
-                </span>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleDemo('priya')}
-                    className="font-semibold text-amber-900 dark:text-amber-300 underline hover:text-amber-950 dark:hover:text-amber-200"
-                  >
-                    Explore as Priya
-                  </button>
-                  <span>•</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDemo('aarav')}
-                    className="font-semibold text-amber-900 dark:text-amber-300 underline hover:text-amber-950 dark:hover:text-amber-200"
-                  >
-                    Explore as Aarav
-                  </button>
+        {emailConfirmationSent ? (
+          <Card className="text-center py-8 px-4 sm:px-6 space-y-4">
+            <div className="w-12 h-12 mx-auto rounded-full bg-brand-50 dark:bg-brand-950/70 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-400 flex items-center justify-center shadow-xs">
+              <MailCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white font-heading">
+                Confirm your Email Address
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-sm mx-auto mt-1">
+                We've sent a verification link to <strong className="text-slate-900 dark:text-white">{email}</strong>. Please check your inbox and tap the link to activate your account.
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-300 text-left space-y-1.5">
+              <p className="font-semibold text-slate-800 dark:text-slate-200">📱 Mobile Phone Instructions:</p>
+              <p>• Open Gmail on your phone and tap the confirmation link.</p>
+              <p>• It will redirect you directly to your NEXUS dashboard.</p>
+            </div>
+
+            {resendStatus && (
+              <p className="text-xs font-semibold text-brand-600 dark:text-brand-400">{resendStatus}</p>
+            )}
+
+            <div className="pt-2 flex flex-col gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                isLoading={resending}
+                onClick={handleResend}
+              >
+                Resend Verification Email
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={() => navigate('/login')}
+              >
+                Go to Sign In
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <Card>
+            {!isSupabaseConnected && (
+              <div className="mb-5 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div>
+                  <strong className="font-semibold block text-amber-900 dark:text-amber-100">Supabase Not Connected</strong>
+                  <span>
+                    To create new permanent accounts in PostgreSQL, configure your Supabase URL & Key in <code className="bg-amber-100 dark:bg-amber-900/50 px-1 py-0.5 rounded text-amber-900 dark:text-amber-200">.env</code>. You can also explore right away in Judge Demo Mode.
+                  </span>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDemo('priya')}
+                      className="font-semibold text-amber-900 dark:text-amber-300 underline hover:text-amber-950 dark:hover:text-amber-200"
+                    >
+                      Explore as Priya
+                    </button>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDemo('aarav')}
+                      className="font-semibold text-amber-900 dark:text-amber-300 underline hover:text-amber-950 dark:hover:text-amber-200"
+                    >
+                      Explore as Aarav
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {errorMessage && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-200 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 dark:text-rose-400" />
-              <span>{errorMessage}</span>
-            </div>
-          )}
+            {errorMessage && (
+              <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-200 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>{errorMessage}</span>
+              </div>
+            )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Full Name
-              </label>
-              <input
-                type="text"
-                required
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="e.g. Priya Sharma"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
-              />
-            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="e.g. Priya Sharma"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Primary Occupation
-              </label>
-              <select
-                value={occupation}
-                onChange={(e) => setOccupation(e.target.value as OccupationType)}
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Primary Occupation
+                </label>
+                <select
+                  value={occupation}
+                  onChange={(e) => setOccupation(e.target.value as OccupationType)}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                >
+                  <option value="Freelancer">Freelancer / Independent Contractor</option>
+                  <option value="Student">Student / College Learner</option>
+                  <option value="Gig Worker">Gig Worker (Delivery, Rideshare, Services)</option>
+                  <option value="Small Business Owner">Small Business Owner / Shopkeeper</option>
+                  <option value="Salaried">Salaried (First-time Borrower)</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                variant="primary"
+                isLoading={isLoading}
+                className="w-full py-2.5 mt-2"
               >
-                <option value="Freelancer">Freelancer / Independent Contractor</option>
-                <option value="Student">Student / College Learner</option>
-                <option value="Gig Worker">Gig Worker (Delivery, Rideshare, Services)</option>
-                <option value="Small Business Owner">Small Business Owner / Shopkeeper</option>
-                <option value="Salaried">Salaried (First-time Borrower)</option>
-                <option value="Other">Other</option>
-              </select>
+                Create Account
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
+              Already have an account?{' '}
+              <Link to="/login" className="font-semibold text-brand-700 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300">
+                Sign In
+              </Link>
             </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Email Address
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@example.com"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              isLoading={isLoading}
-              className="w-full py-2.5 mt-2"
-            >
-              Create Account
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
-            Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-brand-700 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300">
-              Sign In
-            </Link>
-          </div>
-        </Card>
+          </Card>
+        )}
       </div>
     </div>
   );

@@ -11,7 +11,8 @@ interface AuthContextType {
   currentDemoPersona: DemoPersona | null;
   isSupabaseConnected: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
-  signUp: (email: string, password: string, fullName: string, occupation?: OccupationType) => Promise<{ error?: string }>;
+  signUp: (email: string, password: string, fullName: string, occupation?: OccupationType) => Promise<{ error?: string; requiresEmailConfirmation?: boolean }>;
+  resendVerificationEmail: (email: string) => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;
   deleteAccount: () => Promise<{ success: boolean; error?: string }>;
@@ -179,7 +180,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     password: string,
     fullName: string,
     occupation: OccupationType = 'Freelancer'
-  ): Promise<{ error?: string }> => {
+  ): Promise<{ error?: string; requiresEmailConfirmation?: boolean }> => {
     if (!isSupabaseConfigured) {
       return {
         error: 'Supabase credentials are not yet configured in .env. Click "Explore Demo" to inspect the app.'
@@ -187,10 +188,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     try {
+      // Determine dynamic redirect URL (works on deployed Vercel site or current window origin)
+      const configuredSiteUrl = (import.meta.env.VITE_SITE_URL || '').trim();
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      const targetBase = configuredSiteUrl || currentOrigin;
+      const emailRedirectTo = targetBase ? `${targetBase}/dashboard` : undefined;
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
+          emailRedirectTo,
           data: {
             full_name: fullName,
             occupation
@@ -200,10 +208,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) return { error: error.message };
 
+      const requiresEmailConfirmation = Boolean(data.user && !data.session);
+
       if (data.user) {
-        setUser(data.user);
-        setIsDemoMode(false);
-        localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
+        if (data.session) {
+          setUser(data.user);
+          setIsDemoMode(false);
+          localStorage.removeItem(LOCAL_STORAGE_DEMO_KEY);
+        }
 
         const newProf: UserProfile = {
           id: data.user.id,
@@ -216,19 +228,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updatedAt: new Date().toISOString()
         };
 
-        await supabase.from('profiles').upsert({
-          id: data.user.id,
-          full_name: fullName,
-          occupation,
-          onboarding_completed: false
-        });
+        if (data.session) {
+          try {
+            await supabase.from('profiles').upsert({
+              id: data.user.id,
+              full_name: fullName,
+              occupation,
+              onboarding_completed: false
+            });
+          } catch (_err) {
+            // initial upsert notice
+          }
 
-        setProfile(newProf);
+          setProfile(newProf);
+          localStorage.setItem(`nexus_user_profile_${data.user.id}`, JSON.stringify(newProf));
+        }
       }
 
-      return {};
+      return { requiresEmailConfirmation };
     } catch (err: any) {
       return { error: err.message || 'Sign up failed.' };
+    }
+  };
+
+  const resendVerificationEmail = async (email: string): Promise<{ error?: string }> => {
+    if (!isSupabaseConfigured) return { error: 'Supabase is not configured' };
+    try {
+      const configuredSiteUrl = (import.meta.env.VITE_SITE_URL || '').trim();
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      const targetBase = configuredSiteUrl || currentOrigin;
+      const emailRedirectTo = targetBase ? `${targetBase}/dashboard` : undefined;
+
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: {
+          emailRedirectTo
+        }
+      });
+      if (error) return { error: error.message };
+      return {};
+    } catch (err: any) {
+      return { error: err.message || 'Failed to resend confirmation email.' };
     }
   };
 
@@ -398,6 +439,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         isSupabaseConnected: isSupabaseConfigured,
         signIn,
         signUp,
+        resendVerificationEmail,
         signOut,
         updateProfile,
         deleteAccount,

@@ -6,13 +6,15 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 
 export const LoginPage: React.FC = () => {
-  const { signIn, enterDemoMode, isSupabaseConnected } = useAuth();
+  const { signIn, resendVerificationEmail, enterDemoMode, isSupabaseConnected } = useAuth();
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,6 +25,7 @@ export const LoginPage: React.FC = () => {
 
     setIsLoading(true);
     setErrorMessage(null);
+    setResendStatus(null);
 
     const { error } = await signIn(email, password);
     setIsLoading(false);
@@ -31,6 +34,19 @@ export const LoginPage: React.FC = () => {
       setErrorMessage(error);
     } else {
       navigate('/dashboard');
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email) return;
+    setResending(true);
+    setResendStatus(null);
+    const { error } = await resendVerificationEmail(email);
+    setResending(false);
+    if (error) {
+      setResendStatus(`Failed to resend: ${error}`);
+    } else {
+      setResendStatus('Verification link sent! Please check your Gmail/inbox.');
     }
   };
 
@@ -81,9 +97,33 @@ export const LoginPage: React.FC = () => {
           )}
 
           {errorMessage && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-200 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 dark:text-rose-400" />
-              <span>{errorMessage}</span>
+            <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-200 text-xs space-y-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 dark:text-rose-400" />
+                <span>{errorMessage}</span>
+              </div>
+              {errorMessage.toLowerCase().includes('email not confirmed') && (
+                <div className="pt-2 border-t border-rose-200 dark:border-rose-800/60 space-y-1.5">
+                  <p className="text-[11px] text-rose-700 dark:text-rose-300">
+                    Did not receive or open the confirmation link? Click below to send a fresh verification email.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs"
+                    isLoading={resending}
+                    onClick={handleResend}
+                  >
+                    Resend Verification Email
+                  </Button>
+                  {resendStatus && (
+                    <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                      {resendStatus}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
