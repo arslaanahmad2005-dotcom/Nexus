@@ -12,7 +12,7 @@ export const SimpleExplainer: React.FC<SimpleExplainerProps> = ({ term, explanat
 
   return (
     <span className="relative inline-flex items-center gap-1 group">
-      <span className="underline decoration-dotted decoration-slate-400 underline-offset-2 cursor-help text-slate-800">
+      <span className="underline decoration-dotted decoration-slate-400 dark:decoration-slate-500 underline-offset-2 cursor-help text-slate-800 dark:text-slate-200">
         {term}
       </span>
       <button
@@ -27,7 +27,7 @@ export const SimpleExplainer: React.FC<SimpleExplainerProps> = ({ term, explanat
       </button>
 
       {isOpen && (
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900 text-white text-xs rounded-lg shadow-xl z-50 pointer-events-none transition-opacity duration-150 animate-fadeIn">
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-slate-900 dark:bg-slate-800 text-white text-xs rounded-lg shadow-2xl border border-slate-700/80 z-50 pointer-events-none transition-opacity duration-150">
           <span className="block font-semibold text-brand-300 mb-1">{term}</span>
           <span className="block text-slate-200 leading-relaxed">{explanation}</span>
           {example && (
@@ -36,7 +36,7 @@ export const SimpleExplainer: React.FC<SimpleExplainerProps> = ({ term, explanat
               {example}
             </span>
           )}
-          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></span>
+          <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-800"></span>
         </span>
       )}
     </span>

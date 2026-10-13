@@ -1,5 +1,5 @@
 import { FinancialRecord, UserProfile, FinancialPassport } from '../types';
-import { calculateFinancialMetrics } from '../lib/calculations';
+import { calculateFinancialMetrics, calculateFinancialTrustScore } from '../lib/calculations';
 
 export interface DemoPersona {
   id: string;
@@ -264,6 +264,7 @@ const priyaPassport: FinancialPassport = {
   profileCompleteness: 92,
   lastAnalysisDate: '2026-10-12T15:30:00Z',
   metrics: priyaMetrics,
+  trustScore: calculateFinancialTrustScore(priyaRecords, priyaProfile),
   aiInsights: {
     summary:
       'Priya earns an average of ₹62,000 monthly with positive net cash remaining every single month. She demonstrates disciplined debt handling with 3 consecutive on-time device EMI repayments and maintains regular recurring deposits.',
@@ -452,6 +453,7 @@ const aaravPassport: FinancialPassport = {
   profileCompleteness: 85,
   lastAnalysisDate: '2026-10-12T14:30:00Z',
   metrics: aaravMetrics,
+  trustScore: calculateFinancialTrustScore(aaravRecords, aaravProfile),
   aiInsights: {
     summary:
       'Aarav manages a disciplined student budget, earning ₹18,000–₹20,000 monthly through teaching and research. He comfortably services his educational laptop micro-installment while keeping 25% for emergency savings.',

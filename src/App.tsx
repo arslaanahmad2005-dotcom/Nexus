@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 import { FinancialProvider } from './context/FinancialContext';
 import { Navbar } from './components/layout/Navbar';
@@ -21,11 +22,12 @@ import { DocumentsPage } from './pages/DocumentsPage';
 export function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <FinancialProvider>
-          <div className="min-h-screen flex flex-col bg-[#FAFAFA] text-slate-800">
-            <Navbar />
-            <main className="flex-1">
+      <ThemeProvider>
+        <AuthProvider>
+          <FinancialProvider>
+            <div className="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-[#0B0F17] text-slate-900 dark:text-slate-100 transition-colors overflow-x-hidden">
+              <Navbar />
+            <main className="flex-1 w-full">
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<LandingPage />} />
@@ -91,7 +93,8 @@ export function App() {
           </div>
         </FinancialProvider>
       </AuthProvider>
-    </BrowserRouter>
+    </ThemeProvider>
+  </BrowserRouter>
   );
 }
 

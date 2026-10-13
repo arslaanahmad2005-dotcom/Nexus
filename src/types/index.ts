@@ -73,6 +73,77 @@ export interface MonthlyBreakdown {
   savings: number;
 }
 
+export type TrustScoreStatus = 'insufficient_data' | 'provisional' | 'calculated';
+
+export interface TrustScoreComponent {
+  score: number;
+  max: number;
+  rating: string;
+  description: string;
+  status: 'sufficient' | 'provisional' | 'incomplete';
+}
+
+export interface TrustScoreBreakdown {
+  incomeConsistency: TrustScoreComponent & {
+    cvRatio?: number;
+    monthsEvaluated: number;
+  };
+  savingsHabits: TrustScoreComponent & {
+    savingsRatePercent: number;
+    hasExplicitSavings: boolean;
+  };
+  repaymentHistory: TrustScoreComponent & {
+    onTimeCount: number;
+    lateCount: number;
+    hasRepayments: boolean;
+  };
+  expenseManagement: TrustScoreComponent & {
+    expenseToIncomeRatio: number;
+    essentialRatioPercent: number;
+  };
+}
+
+export interface FinancialTrustScore {
+  score: number; // 0 - 100
+  status: TrustScoreStatus;
+  label: string; // e.g. "Excellent Trust", "Solid Trust", "Provisional Trust", "Data Awaiting"
+  breakdown: TrustScoreBreakdown;
+  keyFactors: {
+    type: 'positive' | 'neutral' | 'attention';
+    text: string;
+  }[];
+  methodologyVersion: string; // "v1.0"
+  lastCalculatedAt: string;
+  disclaimer: string;
+}
+
+export interface TrustTip {
+  id: string;
+  title: string;
+  description: string;
+  iconName: 'income' | 'repayment' | 'expense' | 'savings' | 'passport' | 'calendar';
+  category: 'Income' | 'Repayment' | 'Expense' | 'Savings' | 'Documentation';
+  actionLabel?: string;
+  actionLink?: string;
+  rationale: string; // "Why am I seeing this tip?"
+}
+
+export type AnalysisPeriod = 'this_month' | 'last_month' | 'last_3_months' | 'all_time';
+
+export interface PeriodComparison {
+  period: AnalysisPeriod;
+  periodLabel: string;
+  totalIncome: number;
+  totalExpenses: number;
+  netRemaining: number;
+  previousIncome?: number;
+  previousExpenses?: number;
+  incomeChangePercentage?: number;
+  expenseChangePercentage?: number;
+  hasPreviousPeriodData: boolean;
+  notes: string;
+}
+
 export interface FinancialMetrics {
   totalIncome: number;
   totalExpenses: number;
@@ -88,6 +159,7 @@ export interface FinancialMetrics {
   totalRecordsCount: number;
   topExpenseCategories: CategorySummary[];
   monthlyBreakdown: MonthlyBreakdown[];
+  trustScore?: FinancialTrustScore;
   dataSufficiency: {
     hasMinimumRecords: boolean;
     hasMultipleMonths: boolean;
@@ -97,12 +169,17 @@ export interface FinancialMetrics {
 
 export interface AIAnalysisResult {
   id?: string;
-  summary: string;
-  positiveIndicators: string[];
-  areasForAttention: string[];
-  actionableSuggestions: string[];
-  missingInformation: string[];
+  summary: string; // Your Money at a Glance
+  positiveIndicators: string[]; // What You Are Doing Well
+  expenseBreakdownInsight?: string; // Where Your Money Goes
+  areasForAttention: string[]; // What Needs Attention
+  actionableSuggestions: string[]; // Your Next Three Steps
+  trustScoreExplanation?: string; // Your Financial Trust Score
+  missingInformation: string[]; // What Information Is Missing
+  period?: AnalysisPeriod;
+  periodComparison?: PeriodComparison;
   metrics: FinancialMetrics;
+  trustScore?: FinancialTrustScore;
   modelUsed: string;
   generatedAt: string;
   source: 'gemini_api' | 'deterministic_engine';
@@ -122,11 +199,14 @@ export interface FinancialPassport {
   profileCompleteness: number; // 0-100
   lastAnalysisDate: string;
   metrics: FinancialMetrics;
+  trustScore?: FinancialTrustScore;
   aiInsights: {
     summary: string;
     positiveIndicators: string[];
+    expenseBreakdownInsight?: string;
     areasForAttention: string[];
     actionableSuggestions: string[];
+    trustScoreExplanation?: string;
     missingInformation: string[];
     modelUsed: string;
   };
@@ -144,7 +224,7 @@ export interface PassportShareLink {
   passportId: string;
   shareToken: string;
   recipientLabel: string;
-  includedFields: ('summary' | 'income_consistency' | 'expense_breakdown' | 'repayments' | 'actionable_suggestions')[];
+  includedFields: ('summary' | 'income_consistency' | 'expense_breakdown' | 'repayments' | 'actionable_suggestions' | 'trust_score')[];
   expiresAt: string;
   isRevoked: boolean;
   revokedAt?: string;
@@ -165,13 +245,17 @@ export interface SharedPassportView {
   savingsHabitLabel: string;
   createdAt: string;
   includedFields: string[];
+  trustScore?: FinancialTrustScore;
   passportData: {
     metrics: Partial<FinancialMetrics>;
+    trustScore?: FinancialTrustScore;
     insights: {
       summary?: string;
       positiveIndicators?: string[];
+      expenseBreakdownInsight?: string;
       areasForAttention?: string[];
       actionableSuggestions?: string[];
+      trustScoreExplanation?: string;
     };
   };
   disclaimer: string;

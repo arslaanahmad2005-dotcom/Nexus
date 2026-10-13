@@ -82,40 +82,40 @@ export const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({ isOp
       subtitle="Manage your personal data, export records, or permanently delete your account."
       maxWidth="lg"
     >
-      <div className="space-y-6 text-xs text-slate-600">
+      <div className="space-y-6 text-xs text-slate-600 dark:text-slate-300">
         {/* User Data Summary */}
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
-          <div className="flex items-center gap-2 text-navy-900 font-semibold">
-            <UserCheck className="w-4 h-4 text-brand-600" />
+        <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+          <div className="flex items-center gap-2 text-navy-900 dark:text-white font-semibold">
+            <UserCheck className="w-4 h-4 text-brand-600 dark:text-brand-400" />
             <span>Active Financial Identity</span>
           </div>
-          <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 pt-1">
+          <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400 pt-1">
             <div>
               <span>Member: </span>
-              <strong className="text-slate-800">{profile?.fullName || 'Nexus Member'}</strong>
+              <strong className="text-slate-800 dark:text-slate-200">{profile?.fullName || 'Nexus Member'}</strong>
             </div>
             <div>
               <span>Occupation: </span>
-              <strong className="text-slate-800">{profile?.occupation || 'Freelancer'}</strong>
+              <strong className="text-slate-800 dark:text-slate-200">{profile?.occupation || 'Freelancer'}</strong>
             </div>
             <div>
               <span>Recorded Ledger Entries: </span>
-              <strong className="text-slate-800">{records.length} transactions</strong>
+              <strong className="text-slate-800 dark:text-slate-200">{records.length} transactions</strong>
             </div>
             <div>
               <span>Stored Proofs: </span>
-              <strong className="text-slate-800">{documents.length} files</strong>
+              <strong className="text-slate-800 dark:text-slate-200">{documents.length} files</strong>
             </div>
           </div>
         </div>
 
         {/* Data Portability (Export) */}
         <div className="space-y-2">
-          <h4 className="font-semibold text-navy-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-            <Download className="w-3.5 h-3.5 text-brand-600" />
+          <h4 className="font-semibold text-navy-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <Download className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
             <span>Data Portability (GDPR / Privacy Standard)</span>
           </h4>
-          <p className="text-slate-500 leading-relaxed">
+          <p className="text-slate-500 dark:text-slate-400 leading-relaxed">
             Download a complete, machine-readable JSON copy of all financial records, monthly totals, and passport data associated with your account.
           </p>
           <Button
@@ -130,39 +130,39 @@ export const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({ isOp
         </div>
 
         {/* Security Guarantees */}
-        <div className="space-y-2 border-t border-slate-100 pt-4">
-          <h4 className="font-semibold text-navy-900 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-emerald-600" />
+        <div className="space-y-2 border-t border-slate-100 dark:border-slate-800 pt-4">
+          <h4 className="font-semibold text-navy-900 dark:text-white uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+            <Lock className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
             <span>Privacy & Storage Safeguards</span>
           </h4>
-          <ul className="space-y-1.5 text-slate-500 text-[11px]">
+          <ul className="space-y-1.5 text-slate-500 dark:text-slate-400 text-[11px]">
             <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+              <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
               <span>Passwords are hashed with cryptographic salts in Supabase auth; plaintext is never stored or logged.</span>
             </li>
             <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+              <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
               <span>Row Level Security (RLS) restricts database queries strictly to your authenticated user token.</span>
             </li>
             <li className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+              <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
               <span>AI analysis sends only anonymized aggregate metrics; names, emails, and transaction notes are stripped.</span>
             </li>
           </ul>
         </div>
 
         {/* Danger Zone: Account Deletion */}
-        <div className="border-t border-rose-100 pt-4 bg-rose-50/50 p-4 rounded-xl border border-rose-200">
-          <div className="flex items-center gap-2 text-rose-800 font-bold mb-1">
-            <ShieldAlert className="w-4 h-4 text-rose-600" />
+        <div className="border-t border-rose-100 dark:border-rose-900/60 pt-4 bg-rose-50/50 dark:bg-rose-950/30 p-4 rounded-xl border border-rose-200 dark:border-rose-900/60">
+          <div className="flex items-center gap-2 text-rose-800 dark:text-rose-300 font-bold mb-1">
+            <ShieldAlert className="w-4 h-4 text-rose-600 dark:text-rose-400" />
             <span>Danger Zone: Permanent Account Deletion</span>
           </div>
-          <p className="text-rose-700 text-[11px] leading-relaxed mb-3">
+          <p className="text-rose-700 dark:text-rose-300 text-[11px] leading-relaxed mb-3">
             Permanently delete your profile, financial ledger, analyses, passports, active share links, and uploaded documents from the database. This action is irreversible.
           </p>
 
           {deleteError && (
-            <div className="mb-3 p-2 rounded bg-rose-100 text-rose-800 text-[11px] flex items-center gap-1.5">
+            <div className="mb-3 p-2 rounded bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 text-[11px] flex items-center gap-1.5">
               <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
               <span>{deleteError}</span>
             </div>
@@ -179,8 +179,8 @@ export const PrivacySettingsModal: React.FC<PrivacySettingsModalProps> = ({ isOp
               Delete My Account & All Records
             </Button>
           ) : (
-            <div className="space-y-2 bg-white p-3 rounded-lg border border-rose-300">
-              <span className="block font-semibold text-rose-900 text-xs">
+            <div className="space-y-2 bg-white dark:bg-slate-900 p-3 rounded-lg border border-rose-300 dark:border-rose-800">
+              <span className="block font-semibold text-rose-900 dark:text-rose-300 text-xs">
                 Are you completely sure? This will permanently erase all your data immediately.
               </span>
               <div className="flex items-center gap-2 pt-1">

@@ -8,14 +8,17 @@ import {
   FinancialPassport,
   PassportShareLink,
   SupportingDocument,
-  RecordType
+  RecordType,
+  AnalysisPeriod,
+  FinancialTrustScore
 } from '../types';
-import { calculateFinancialMetrics } from '../lib/calculations';
+import { calculateFinancialMetrics, calculateFinancialTrustScore, filterRecordsByPeriod, calculatePeriodComparison } from '../lib/calculations';
 import { DEMO_PERSONAS } from '../data/demoData';
 
 interface FinancialContextType {
   records: FinancialRecord[];
   metrics: FinancialMetrics;
+  trustScore: FinancialTrustScore;
   analysis: AIAnalysisResult | null;
   passport: FinancialPassport | null;
   shareLinks: PassportShareLink[];
@@ -34,11 +37,12 @@ interface FinancialContextType {
   addRecord: (record: Omit<FinancialRecord, 'id' | 'userId' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
   updateRecord: (id: string, updates: Partial<FinancialRecord>) => Promise<boolean>;
   deleteRecord: (id: string) => Promise<boolean>;
-  runAIAnalysis: () => Promise<AIAnalysisResult | null>;
+  runAIAnalysis: (period?: AnalysisPeriod) => Promise<AIAnalysisResult | null>;
+  askFollowUpQuestion: (question: string, period?: AnalysisPeriod) => Promise<string | null>;
   generatePassport: () => Promise<FinancialPassport | null>;
   createShareLink: (options: {
     recipientLabel: string;
-    includedFields: ('summary' | 'income_consistency' | 'expense_breakdown' | 'repayments' | 'actionable_suggestions')[];
+    includedFields: ('summary' | 'income_consistency' | 'expense_breakdown' | 'repayments' | 'actionable_suggestions' | 'trust_score')[];
     expiresInHours: number;
   }) => Promise<{ shareUrl: string; shareToken: string; expiresAt: string } | null>;
   revokeShareLink: (shareId: string, shareToken?: string) => Promise<boolean>;
@@ -243,10 +247,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  // Dynamically compute metrics whenever records change
+  // Dynamically compute metrics and trust score whenever records change
   const metrics = useMemo(() => {
     return calculateFinancialMetrics(records);
   }, [records]);
+
+  const trustScore = useMemo(() => {
+    return calculateFinancialTrustScore(records, profile ? { occupation: profile.occupation } : undefined);
+  }, [records, profile]);
 
   // Persist demo records to localStorage when in demo mode
   const saveDemoRecords = (updated: FinancialRecord[]) => {
@@ -357,17 +365,23 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
   };
 
-  const runAIAnalysis = async (): Promise<AIAnalysisResult | null> => {
+  const runAIAnalysis = async (period: AnalysisPeriod = 'all_time'): Promise<AIAnalysisResult | null> => {
     setIsAnalyzing(true);
     setError(null);
 
     try {
+      const activeRecords = filterRecordsByPeriod(records, period);
+      const activeMetrics = calculateFinancialMetrics(activeRecords);
+      const calculatedTrustScore = calculateFinancialTrustScore(records, profile ? { occupation: profile.occupation } : undefined);
+      const periodComparison = calculatePeriodComparison(records, period);
+
       const response = await fetch('/api/analyze-finances', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           records,
-          metrics,
+          metrics: activeMetrics,
+          period,
           profile: {
             fullName: profile?.fullName || 'Nexus User',
             occupation: profile?.occupation || 'Freelancer',
@@ -383,34 +397,90 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
 
       const data = await response.json();
-      setAnalysis(data.analysis);
+      const fullAnalysis: AIAnalysisResult = {
+        ...data.analysis,
+        period,
+        periodComparison,
+        trustScore: calculatedTrustScore
+      };
+      setAnalysis(fullAnalysis);
 
       // If user is logged into real Supabase, store analysis in DB
-      if (isSupabaseConfigured && user && data.analysis) {
+      if (isSupabaseConfigured && user && fullAnalysis) {
         await supabase.from('financial_analyses').insert({
           user_id: user.id,
-          total_income: metrics.totalIncome,
-          total_expenses: metrics.totalExpenses,
-          net_remaining: metrics.netRemaining,
-          income_consistency_score: metrics.incomeConsistencyScore,
-          savings_rate: metrics.savingsRate,
-          metrics_json: metrics,
-          ai_summary: data.analysis.summary,
-          positive_indicators: data.analysis.positiveIndicators,
-          areas_for_attention: data.analysis.areasForAttention,
-          actionable_suggestions: data.analysis.actionableSuggestions,
-          missing_information: data.analysis.missingInformation,
-          model_used: data.analysis.modelUsed
+          total_income: activeMetrics.totalIncome,
+          total_expenses: activeMetrics.totalExpenses,
+          net_remaining: activeMetrics.netRemaining,
+          income_consistency_score: activeMetrics.incomeConsistencyScore,
+          savings_rate: activeMetrics.savingsRate,
+          metrics_json: { ...activeMetrics, trustScore: calculatedTrustScore, period, periodComparison },
+          ai_summary: fullAnalysis.summary,
+          positive_indicators: fullAnalysis.positiveIndicators,
+          areas_for_attention: fullAnalysis.areasForAttention,
+          actionable_suggestions: fullAnalysis.actionableSuggestions,
+          missing_information: fullAnalysis.missingInformation,
+          model_used: fullAnalysis.modelUsed
         });
       }
 
-      return data.analysis;
+      return fullAnalysis;
     } catch (err: any) {
       console.error('[NEXUS AI] Error during AI analysis: [REDACTED]');
       setError('Unable to complete AI analysis at this moment. You can retry or view calculated metrics.');
       return null;
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  const askFollowUpQuestion = async (question: string, period: AnalysisPeriod = 'all_time'): Promise<string | null> => {
+    try {
+      const response = await fetch('/api/ask-followup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question,
+          records,
+          period,
+          profile: {
+            fullName: profile?.fullName || 'Nexus User',
+            occupation: profile?.occupation || 'Freelancer',
+            monthlyIncomeRange: profile?.monthlyIncomeRange
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Follow-up request failed');
+      }
+
+      const data = await response.json();
+      return data.answer || null;
+    } catch (err) {
+      // Deterministic client fallback if network / backend is unavailable
+      const top = metrics.topExpenseCategories[0];
+      const q = question.toLowerCase();
+      if (q.includes('where am i spending') || q.includes('spending the most')) {
+        return top
+          ? `You are spending the most on ${top.category}, which accounts for ${top.percentage}% of your expenses. Reviewing non-essential purchases in this area will quickly build your monthly breathing room.`
+          : 'You have not added enough expense records yet to identify spending hotspots.';
+      }
+      if (q.includes('manage') || q.includes('better')) {
+        return `Your expenses currently absorb ${metrics.expenseToIncomeRatio}% of your earnings. Setting aside 10% to 15% immediately upon receiving income will build your emergency cushion without affecting necessities.`;
+      }
+      if (q.includes('missing')) {
+        return metrics.dataSufficiency.missingAreas.length > 0
+          ? `To make your financial story fully convincing, focus on adding: ${metrics.dataSufficiency.missingAreas.join('; ')}.`
+          : 'Your baseline records are complete. Adding utility bills or rent receipts to your document vault provides additional third-party proof.';
+      }
+      if (q.includes('passport')) {
+        return 'Build a more complete Financial Trust Passport by recording at least 3 months of steady income and logging on-time utility bills or rent receipts before generating your share link.';
+      }
+      if (q.includes('score')) {
+        return `Your Financial Trust Score is ${trustScore.score}/100. It updates deterministically whenever you log new earnings, repayments, or savings. Logging scheduled bill payments unlocks additional points.`;
+      }
+      return `Your records demonstrate ${metrics.monthsTracked} month(s) of activity with ${metrics.savingsRate}% cash retention rate. Regular entries keep your profile verifiable.`;
     }
   };
 
@@ -476,11 +546,14 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         profileCompleteness: completeness,
         lastAnalysisDate: new Date().toISOString(),
         metrics,
+        trustScore,
         aiInsights: {
           summary: currentAnalysis.summary,
           positiveIndicators: currentAnalysis.positiveIndicators,
+          expenseBreakdownInsight: currentAnalysis.expenseBreakdownInsight,
           areasForAttention: currentAnalysis.areasForAttention,
           actionableSuggestions: currentAnalysis.actionableSuggestions,
+          trustScoreExplanation: currentAnalysis.trustScoreExplanation,
           missingInformation: currentAnalysis.missingInformation,
           modelUsed: currentAnalysis.modelUsed
         },
@@ -511,6 +584,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           passport_data: {
             profileCompleteness: newPassport.profileCompleteness,
             metrics: newPassport.metrics,
+            trustScore,
             aiInsights: newPassport.aiInsights,
             supportingDocsSummary: newPassport.supportingDocsSummary
           },
@@ -534,7 +608,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const createShareLink = async (options: {
     recipientLabel: string;
-    includedFields: ('summary' | 'income_consistency' | 'expense_breakdown' | 'repayments' | 'actionable_suggestions')[];
+    includedFields: ('summary' | 'income_consistency' | 'expense_breakdown' | 'repayments' | 'actionable_suggestions' | 'trust_score')[];
     expiresInHours: number;
   }): Promise<{ shareUrl: string; shareToken: string; expiresAt: string } | null> => {
     setIsSharingPassport(true);
@@ -710,6 +784,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         records,
         metrics,
+        trustScore,
         analysis,
         passport,
         shareLinks,
@@ -724,6 +799,7 @@ export const FinancialProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         updateRecord,
         deleteRecord,
         runAIAnalysis,
+        askFollowUpQuestion,
         generatePassport,
         createShareLink,
         revokeShareLink,

@@ -201,8 +201,8 @@ export const MyMoneyPage: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-navy-900 font-heading">My Money</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-navy-900 dark:text-white font-heading">My Money</h1>
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Track income, living expenses, and on-time repayments. Dashboard totals update automatically.
           </p>
         </div>
@@ -228,7 +228,7 @@ export const MyMoneyPage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search category or description..."
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
 
@@ -237,7 +237,7 @@ export const MyMoneyPage: React.FC = () => {
             <select
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
             >
               <option value="ALL">All Types (Income & Expenses)</option>
               <option value="Income">Money In (Income)</option>
@@ -252,7 +252,7 @@ export const MyMoneyPage: React.FC = () => {
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
             >
               <option value="ALL">All Recorded Months</option>
               {uniqueMonths.map((m) => (
@@ -266,21 +266,21 @@ export const MyMoneyPage: React.FC = () => {
       </Card>
 
       {/* Records Count & Table */}
-      <div className="bg-white rounded-xl border border-slate-200/80 shadow-subtle overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between text-xs text-slate-500 font-medium">
+      <div className="bg-white dark:bg-[#111827] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
           <span>
-            Showing <strong className="text-navy-900">{filteredRecords.length}</strong> of{' '}
-            <strong className="text-navy-900">{records.length}</strong> records
+            Showing <strong className="text-slate-900 dark:text-white">{filteredRecords.length}</strong> of{' '}
+            <strong className="text-slate-900 dark:text-white">{records.length}</strong> records
           </span>
           {records.length > 0 && (
-            <span className="text-[11px] text-slate-400">Amounts shown in Indian Rupees (₹)</span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">Amounts shown in Indian Rupees (₹)</span>
           )}
         </div>
 
         {filteredRecords.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50/70 border-b border-slate-200 text-slate-500 uppercase tracking-wider font-semibold">
+              <thead className="bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-semibold">
                 <tr>
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Type</th>
@@ -290,12 +290,12 @@ export const MyMoneyPage: React.FC = () => {
                   <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 {filteredRecords.map((r) => {
                   const isPositive = r.recordType === 'Income';
                   return (
-                    <tr key={r.id} className="hover:bg-slate-50/60 transition-colors">
-                      <td className="py-3 px-4 text-slate-600 font-mono whitespace-nowrap">
+                    <tr key={r.id} className="hover:bg-slate-50/70 dark:hover:bg-slate-800/50 transition-colors">
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-400 font-mono whitespace-nowrap">
                         {r.recordDate}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
@@ -311,20 +311,20 @@ export const MyMoneyPage: React.FC = () => {
                           }
                           size="sm"
                         >
-                          {r.recordType === 'Income' && <ArrowUpRight className="w-3 h-3 text-emerald-600" />}
-                          {r.recordType === 'Expense' && <ArrowDownRight className="w-3 h-3 text-slate-500" />}
-                          {r.recordType === 'Repayment' && <CheckCircle2 className="w-3 h-3 text-brand-600" />}
-                          {r.recordType === 'Savings' && <PiggyBank className="w-3 h-3 text-sky-600" />}
+                          {r.recordType === 'Income' && <ArrowUpRight className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />}
+                          {r.recordType === 'Expense' && <ArrowDownRight className="w-3 h-3 text-slate-500 dark:text-slate-400" />}
+                          {r.recordType === 'Repayment' && <CheckCircle2 className="w-3 h-3 text-brand-600 dark:text-brand-400" />}
+                          {r.recordType === 'Savings' && <PiggyBank className="w-3 h-3 text-sky-600 dark:text-sky-400" />}
                           <span>{r.recordType}</span>
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 font-semibold text-navy-900 whitespace-nowrap">
+                      <td className="py-3 px-4 font-semibold text-slate-900 dark:text-white whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <span>{r.category}</span>
                           {r.isRecurring && (
                             <span
                               title="Recurring monthly transaction"
-                              className="inline-flex text-brand-700 bg-brand-50 px-1 py-0.2 rounded text-[10px]"
+                              className="inline-flex text-brand-700 dark:text-brand-300 bg-brand-50 dark:bg-brand-950/70 px-1 py-0.2 rounded text-[10px]"
                             >
                               <Repeat className="w-2.5 h-2.5 inline mr-0.5" />
                               Auto
@@ -332,11 +332,11 @@ export const MyMoneyPage: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-slate-600 max-w-xs truncate">
-                        {r.description || <span className="text-slate-400 italic">No notes</span>}
+                      <td className="py-3 px-4 text-slate-600 dark:text-slate-300 max-w-xs truncate">
+                        {r.description || <span className="text-slate-400 dark:text-slate-500 italic">No notes</span>}
                       </td>
-                      <td className="py-3 px-4 text-right font-bold whitespace-nowrap text-navy-900">
-                        <span className={isPositive ? 'text-emerald-700' : 'text-slate-800'}>
+                      <td className="py-3 px-4 text-right font-bold whitespace-nowrap text-slate-900 dark:text-white">
+                        <span className={isPositive ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-200'}>
                           {isPositive ? '+' : '-'}
                           {formatINR(r.amount)}
                         </span>
@@ -346,7 +346,7 @@ export const MyMoneyPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => openEditModal(r)}
-                            className="p-1.5 text-slate-400 hover:text-navy-900 hover:bg-slate-100 rounded-md transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors"
                             title="Edit Record"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -354,7 +354,7 @@ export const MyMoneyPage: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => setDeletingRecord(r)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-md transition-colors"
                             title="Delete Record"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -369,11 +369,11 @@ export const MyMoneyPage: React.FC = () => {
           </div>
         ) : (
           <div className="text-center py-12 px-4 space-y-3">
-            <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 mx-auto flex items-center justify-center">
               <IndianRupee className="w-6 h-6" />
             </div>
-            <h4 className="text-sm font-semibold text-navy-900">No records found</h4>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">No records found</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
               {searchQuery || selectedType !== 'ALL' || selectedMonth !== 'ALL'
                 ? 'No transactions match your current search filters. Try clearing filters.'
                 : 'You have not added any money entries yet. Click below to add your first record.'}
@@ -403,7 +403,7 @@ export const MyMoneyPage: React.FC = () => {
       >
         <form onSubmit={handleSaveRecord} className="space-y-4 text-xs">
           {formError && (
-            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 flex items-center gap-2">
+            <div className="p-3 rounded-lg bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               <span>{formError}</span>
             </div>
@@ -411,7 +411,7 @@ export const MyMoneyPage: React.FC = () => {
 
           {/* Record Type Picker */}
           <div>
-            <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
               Record Type
             </label>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -428,8 +428,8 @@ export const MyMoneyPage: React.FC = () => {
                   }}
                   className={`py-2 px-2 text-center rounded-lg font-medium border transition-colors ${
                     formRecordType === t
-                      ? 'bg-brand-50 border-brand-500 text-brand-900 font-semibold'
-                      : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      ? 'bg-brand-50 dark:bg-brand-950/70 border-brand-500 text-brand-900 dark:text-brand-300 font-semibold'
+                      : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                   }`}
                 >
                   {t}
@@ -441,7 +441,7 @@ export const MyMoneyPage: React.FC = () => {
           {/* Amount & Date in 2 Cols */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Amount (₹ INR)
               </label>
               <div className="relative">
@@ -456,13 +456,13 @@ export const MyMoneyPage: React.FC = () => {
                   value={formAmount}
                   onChange={(e) => setFormAmount(e.target.value)}
                   placeholder="e.g. 15000"
-                  className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+              <label className="block font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
                 Date
               </label>
               <input
@@ -470,20 +470,20 @@ export const MyMoneyPage: React.FC = () => {
                 required
                 value={formDate}
                 onChange={(e) => setFormDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
               />
             </div>
           </div>
 
           {/* Category */}
           <div>
-            <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
               Category
             </label>
             <select
               value={formCategory}
               onChange={(e) => setFormCategory(e.target.value)}
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
             >
               {formRecordType === 'Income' ? (
                 INCOME_CATEGORIES.map((cat) => (
@@ -516,7 +516,7 @@ export const MyMoneyPage: React.FC = () => {
 
           {/* Description */}
           <div>
-            <label className="block font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            <label className="block font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
               Description / Notes (Optional)
             </label>
             <input
@@ -524,7 +524,7 @@ export const MyMoneyPage: React.FC = () => {
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
               placeholder="e.g. Client payout for website design project"
-              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
           </div>
 
@@ -535,16 +535,16 @@ export const MyMoneyPage: React.FC = () => {
                 type="checkbox"
                 checked={formIsRecurring}
                 onChange={(e) => setFormIsRecurring(e.target.checked)}
-                className="h-4 w-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300"
+                className="h-4 w-4 rounded text-brand-600 focus:ring-brand-500 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800"
               />
-              <span className="text-slate-700 font-medium">
+              <span className="text-slate-700 dark:text-slate-300 font-medium">
                 Recurring monthly transaction (e.g. monthly rent, retainer, or EMI)
               </span>
             </label>
           </div>
 
           {/* Submit buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
             <Button
               type="button"
               variant="outline"
@@ -571,15 +571,15 @@ export const MyMoneyPage: React.FC = () => {
         maxWidth="sm"
       >
         <div className="space-y-4 text-xs">
-          <p className="text-slate-600 leading-relaxed">
+          <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
             Are you sure you want to delete the record for{' '}
-            <strong className="text-navy-900">
+            <strong className="text-navy-900 dark:text-white">
               {deletingRecord?.category} ({formatINR(deletingRecord?.amount || 0)})
             </strong>{' '}
             dated {deletingRecord?.recordDate}?
           </p>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
             <Button type="button" variant="outline" onClick={() => setDeletingRecord(null)}>
               Cancel
             </Button>

@@ -50,29 +50,29 @@ export const SignupPage: React.FC = () => {
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex p-3 rounded-xl bg-navy-900 text-brand-400 mb-2 shadow-sm">
+          <div className="inline-flex p-3 rounded-xl bg-navy-900 dark:bg-brand-950 text-brand-400 mb-2 shadow-sm border border-transparent dark:border-brand-800/40">
             <ShieldCheck className="w-7 h-7" />
           </div>
-          <h2 className="text-2xl font-bold text-navy-900 font-heading">Create your NEXUS account</h2>
-          <p className="text-xs text-slate-500">
+          <h2 className="text-2xl font-bold text-navy-900 dark:text-white font-heading">Create your NEXUS account</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Start building your Financial Trust Passport today
           </p>
         </div>
 
         <Card>
           {!isSupabaseConnected && (
-            <div className="mb-5 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-start gap-2.5">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-600 mt-0.5" />
+            <div className="mb-5 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
               <div>
-                <strong className="font-semibold block text-amber-900">Supabase Not Connected</strong>
+                <strong className="font-semibold block text-amber-900 dark:text-amber-100">Supabase Not Connected</strong>
                 <span>
-                  To create new permanent accounts in PostgreSQL, configure your Supabase URL & Key in <code className="bg-amber-100 px-1 py-0.5 rounded">.env</code>. You can also explore right away in Judge Demo Mode.
+                  To create new permanent accounts in PostgreSQL, configure your Supabase URL & Key in <code className="bg-amber-100 dark:bg-amber-900/50 px-1 py-0.5 rounded text-amber-900 dark:text-amber-200">.env</code>. You can also explore right away in Judge Demo Mode.
                 </span>
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
                     onClick={() => handleDemo('priya')}
-                    className="font-semibold text-amber-900 underline hover:text-amber-950"
+                    className="font-semibold text-amber-900 dark:text-amber-300 underline hover:text-amber-950 dark:hover:text-amber-200"
                   >
                     Explore as Priya
                   </button>
@@ -80,7 +80,7 @@ export const SignupPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleDemo('aarav')}
-                    className="font-semibold text-amber-900 underline hover:text-amber-950"
+                    className="font-semibold text-amber-900 dark:text-amber-300 underline hover:text-amber-950 dark:hover:text-amber-200"
                   >
                     Explore as Aarav
                   </button>
@@ -90,15 +90,15 @@ export const SignupPage: React.FC = () => {
           )}
 
           {errorMessage && (
-            <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <div className="mb-4 p-3 rounded-lg bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800/60 text-rose-700 dark:text-rose-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 dark:text-rose-400" />
               <span>{errorMessage}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Full Name
               </label>
               <input
@@ -107,18 +107,18 @@ export const SignupPage: React.FC = () => {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="e.g. Priya Sharma"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Primary Occupation
               </label>
               <select
                 value={occupation}
                 onChange={(e) => setOccupation(e.target.value as OccupationType)}
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors bg-white"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
               >
                 <option value="Freelancer">Freelancer / Independent Contractor</option>
                 <option value="Student">Student / College Learner</option>
@@ -130,7 +130,7 @@ export const SignupPage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Email Address
               </label>
               <input
@@ -139,12 +139,12 @@ export const SignupPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
                 Password
               </label>
               <input
@@ -153,7 +153,7 @@ export const SignupPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
-                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
+                className="w-full px-3.5 py-2.5 text-sm rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500 transition-colors"
               />
             </div>
 
@@ -167,9 +167,9 @@ export const SignupPage: React.FC = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-xs text-slate-500">
+          <div className="mt-6 text-center text-xs text-slate-500 dark:text-slate-400">
             Already have an account?{' '}
-            <Link to="/login" className="font-semibold text-brand-700 hover:text-brand-800">
+            <Link to="/login" className="font-semibold text-brand-700 dark:text-brand-400 hover:text-brand-800 dark:hover:text-brand-300">
               Sign In
             </Link>
           </div>
