@@ -1,0 +1,36 @@
+MIT License
+
+Copyright (c) 2026 NEXUS Contributors & Maintainers
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+--------------------------------------------------------------------------------
+THIRD-PARTY AI MODEL NOTICE & TERMS OF USE
+--------------------------------------------------------------------------------
+This project integrates Google's open-weight Gemma 4 models (including
+gemma-4-26b-a4b-it). The software code in this repository is licensed under the
+MIT License above, but third-party AI model weights, model outputs, and model
+parameters are NOT covered by this project's MIT software license.
+
+Access to and use of Google Gemma models are governed separately by Google's
+official Gemma Terms of Use and the Gemma Prohibited Use Policy:
+- Gemma Terms of Use: https://ai.google.dev/gemma/terms
+- Prohibited Use Policy: https://policies.google.com/terms/generative-ai/use-policy
+
+Please see AI_MODEL.md for detailed model architecture, governance, and terms.
